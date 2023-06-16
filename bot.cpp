@@ -1,65 +1,70 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <vector>
+#include <curl/curl.h>
 #include <nlohmann/json.hpp>
-#include <cpprest/http_client.h>
-#include <cpprest/filestream.h>
 
-using namespace std;
 using json = nlohmann::json;
-using namespace web::http;
-using namespace web::http::client;
-using namespace concurrency::streams;
 
-const string TOKEN = "5802864819:AAHfljVgO6D1GFvr7KjXBG769UDqzq-LkXM"; //Token utilizado.
+const std::string TOKEN = "5802864819:AAHfljVgO6D1GFvr7KjXBG769UDqzq-LkXM";
 
-void send_message(const string& chat_id, const string& text) {
-    string url = "https://api.telegram.org/bot" + TOKEN + "/sendMessage";
-    json params = {
-        {"chat_id", chat_id},
-        {"text", text}
-    };
+size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* buffer) {
+    size_t totalSize = size * nmemb;
+    buffer->append(static_cast<char*>(contents), totalSize);
+    return totalSize;
+}
 
-    http_client client(url);
-    client.request(methods::POST, "", params.dump(), "application/json").then([](http_response response) {
-        if (response.status_code() == status_codes::OK) {
-            cout << "Mensagem enviada com sucesso!" << endl;
+void send_message(const std::string& chat_id, const std::string& text) {
+    std::string url = "https://api.telegram.org/bot" + TOKEN + "/sendMessage";
+    std::string postData = "chat_id=" + chat_id + "&text=" + text;
+
+    CURL* curl = curl_easy_init();
+    if (curl) {
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postData.c_str());
+
+        std::string response;
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+
+        CURLcode res = curl_easy_perform(curl);
+        if (res == CURLE_OK) {
+            std::cout << "Mensagem enviada com sucesso!" << std::endl;
         } else {
-            cout << "Falha ao enviar a mensagem." << endl;
+            std::cout << "Falha ao enviar a mensagem." << std::endl;
         }
-    }).wait();
+
+        curl_easy_cleanup(curl);
+    }
 }
 
 int main() {
-    
-    ifstream file("registro_placas.json"); // Leitura do arquivo das placas
-    json data;
-    file >> data;
-
-    // Função fictícia para reconhecimento de placa usando OpenCV
-    string recognize_license_plate() {
-        // Aqui você pode adicionar o código para usar o OpenCV e reconhecer a placa
-        
-        // Neste exemplo, retornaremos uma placa fictícia
-        string placa_lida = "DEF9012";
-        return placa_lida;
+    std::ifstream file("registro_placas.json");
+    if (!file.is_open()) {
+        std::cout << "Falha ao abrir o arquivo JSON." << std::endl;
+        return 1;
     }
 
-    // Obter a placa usando o reconhecimento de placa
-    string placa = recognize_license_plate();
+    json data;
+    file >> data;
+    file.close();
 
-    // Procura a placa no arquivo JSON
+    std::string placa = "DEF9012";
+    bool placaEncontrada = false;
+
     for (const auto& obj : data) {
         if (obj["placa"] == placa) {
-            string chat_id = obj["id_telegram"];
-            string message_text = "Olá! Esta é uma mensagem enviada pelo bot do Telegram.";
+            std::string chat_id = obj["id_telegram"];
+            std::string message_text = "Olá! Esta é uma mensagem enviada pelo bot do Telegram.";
             send_message(chat_id, message_text);
+            placaEncontrada = true;
             break;
         }
     }
 
-    cout << "Placa não encontrada no arquivo JSON." << endl;
+    if (!placaEncontrada) {
+        std::cout << "Placa não encontrada no arquivo JSON." << std::endl;
+    }
 
     return 0;
 }
