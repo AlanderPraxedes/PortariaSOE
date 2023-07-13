@@ -10,7 +10,7 @@ using namespace cv;
 using namespace std;
 using json = nlohmann::json;
 
-const std::string TOKEN = "SEU_TOKEN_AQUI";
+const std::string TOKEN = "5802864819:AAHfljVgO6D1GFvr7KjXBG769UDqzq-LkXM";
 
 // Função de callback para escrita dos dados recebidos pela requisição cURL
 size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* buffer) {
@@ -57,8 +57,9 @@ void capturarImagem(const string& caminhoArquivo) {
 }
 
 int main() {
-    //string caminhoImagem = "imagem.jpg";
-    //capturarImagem(caminhoImagem);
+    while(1){
+    string caminhoImagem = "imagem.jpg";
+    capturarImagem(caminhoImagem);
 
 
     // Carregar a imagem
@@ -194,6 +195,15 @@ int main() {
     if (!placaEncontrada) {
         std::cout << "Placa não encontrada no arquivo JSON." << std::endl;
     }
+    //Excluir imagem da placa recortada
+    const char* nomeArquivo = "placa.jpg";
 
+    // Verifica se o arquivo existe antes de excluir
+    if (std::remove(nomeArquivo) == 0) {
+        std::cout << "O arquivo '" << nomeArquivo << "' foi excluído com sucesso." << std::endl;
+    } else {
+        std::cout << "Falha ao excluir o arquivo '" << nomeArquivo << "'." << std::endl;
+    }
+    }
     return 0;
 }
